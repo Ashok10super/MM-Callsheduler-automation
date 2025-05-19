@@ -43,6 +43,7 @@ def get_untoced_leads(access_token):
             og_reesponse = response.json()
             data_list = og_reesponse['data']
             initial_date = datetime.datetime.now() #initalizing the initial call start time for the sm
+            print("Initial date",initial_date)
             print("Lenght of lead list",len(data_list))
             for lead in data_list:
                 if counter == 0 :            
@@ -96,7 +97,7 @@ def get_call_history(access_token,sm_name):#this method will get the total sched
 
 def schedule_call(lead_id,lead_name,owner_id,token,date):
     
-    url = "https://www.zohoapis.com.zoho.com/crm/v2/Calls"
+    url = "https://www.zohoapis.com/crm/v2/Calls"
     time_delta = date+timedelta(minutes=25)# add the previous call date with 25 minutes
     utc = datetime.datetime.fromisoformat(str(time_delta))
     call_date = utc.astimezone(ZoneInfo('Asia/Kolkata'))
