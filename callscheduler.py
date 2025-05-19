@@ -99,7 +99,7 @@ def schedule_call(lead_id,lead_name,owner_id,token,date):
     url = "https://www.zohoapis.com.zoho.com/crm/v2/Calls"
     time_delta = date+timedelta(minutes=25)# add the previous call date with 25 minutes
     utc = datetime.datetime.fromisoformat(str(time_delta))
-    call_date = utc.astimezone(ZoneInfo('Asia/kolkata'))
+    call_date = utc.astimezone(ZoneInfo('Asia/Kolkata'))
     dt = call_date.replace(microsecond=0)
     payload = {
         "data": [
