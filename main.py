@@ -1,18 +1,13 @@
-import time
-import requests
-import datetime
-def main():
-  print("script is running at",datetime.datetime.now())
-  payload = {
-    "data":"came from server"
-  }
+import getaccesstoken
+import callscheduler
+import callmonitoragent
 
-  response = requests.post('https://webhook.site/abaaab82-edb7-4307-ad33-f5f39018747e',data=payload)
+def main():#This main function is the top level function in the function chain will execute the sub functions
+   token = getaccesstoken.get_access_token()
+   callscheduler.delete_last_hr_data()
+   callscheduler.get_untoced_leads(token)
+   #callmonitoragent.monitor_and_send_notification()
 
-  if response.status_code == 200:
-    print("cron job work successfull")
-  else:
-    print("cron job failed")
 
 if __name__ == "__main__":
- main()
+   main()
