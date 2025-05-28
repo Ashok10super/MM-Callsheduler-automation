@@ -8,6 +8,7 @@ load_dotenv(override=True)#loads all env variables into the system path
 
 session = requests.session()
 
+
 def get_access_token():#This function is responsible for handling the Auth part of the script
     refresh_token = os.getenv("REFRESH_TOKEN").strip()
     client_id = os.getenv("CLIENT_ID").strip()

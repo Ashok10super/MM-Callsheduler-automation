@@ -19,48 +19,54 @@ def get_untoced_leads(access_token):
     'Sandip Kumar Jena',
     'Sonu Sathyan']
     token = access_token
-    for sales_manger in sales_Manager_names: 
-        counter = 0 #initalize counter to zero
-       
-        sm_outstanding_call_count =  get_call_history(access_token=token,sm_name=sales_manger)
-        print(sales_manger,'=>',sm_outstanding_call_count)
-        
-        if sm_outstanding_call_count > 9:
-            print("sm already have full call count continue")
-            continue
-        remaining_call_bandwidth = 10-sm_outstanding_call_count 
-        print("remaining bandwith->",remaining_call_bandwidth)
-        url = f"https://www.zohoapis.com/crm/v7/Leads/search?criteria=(Owner:equals:{sales_manger})and(Lead_Status:in:Yet to be dialed)&per_page={remaining_call_bandwidth}&page=1"
-
+    delete_last_hr_data()
+    for sales_manger in sales_Manager_names:
+        print(sales_manger) 
+        ignore_lead_dict = get_call_history(token,sales_manger)#call and get the history of calls before scehduling the calls
+        print("Ignored_lead_list",type(ignore_lead_dict),ignore_lead_dict)
+        url = f"https://crm.zoho.com/crm/v7/Leads/search?criteria=(Owner:equals:{sales_manger})and(Lead_Status:in:Yet to be dialed)&per_page=200&page=1"
         headers = {
-        "Authorization":f"Zoho-oauthtoken {access_token}",
-        }
+            "Authorization":f"Zoho-oauthtoken {access_token}",
+            }
         try:
             response = session.get(url=url,headers=headers)
             if response.status_code==204:
-                print("pass")
+                print("No lead found for this sales manager")
                 continue
             og_reesponse = response.json()
-            data_list = og_reesponse['data']
-            initial_date = datetime.datetime.now() #initalizing the initial call start time for the sm
-            print("Initial date",initial_date)
-            print("Lenght of lead list",len(data_list))
+            data_list = og_reesponse['data']#After getting all the leads check wheather they are already scheduled or overdued
+            initial_date = datetime.datetime.now(tz=ZoneInfo('Asia/Kolkata'))#sets the inital date to now
+            counter = 0 #initalize the  page to one
+            print("Lead len->",len(data_list))
+            already_scheduled_count = 0
+            lead_id_list = list()#stores all the call scheduled lead ids
             for lead in data_list:
-                if counter == 0 :            
-                    prev_time = schedule_call(lead_id=lead['id'],lead_name=lead['Company'],owner_id=(lead['Owner'])['id'],token=token,date=initial_date)
+                if  lead['id'] in ignore_lead_dict:
+                    already_scheduled_count+=1
                 else:
-                    prev_time =  schedule_call(lead_id=lead['id'],lead_name=lead['Company'],owner_id=(lead['Owner'])['id'],token=token,date=prev_time)
-                counter+=1
-            db.get_current_call_hsitory_collection().insert_one({"sm_name":sales_manger,"No_calls_scheduled":counter,"time":initial_date})
+                    if counter == 0:
+                        lead_id_list.append(lead['id'])
+                        prev_time = schedule_call(lead_id=lead['id'],lead_name=lead['Company'],owner_id=(lead['Owner'])['id'],token=token,date=initial_date)
+                        counter+=1
+                    elif prev_time.hour > 17:
+                        print("scheduled call went over 17 hours")
+                        break
+                    else:
+                        lead_id_list.append(lead['id'])
+                        prev_time = schedule_call(lead_id=lead['id'],lead_name=lead['Company'],owner_id=(lead['Owner'])['id'],token=token,date=prev_time)
+                        counter+=1
+            db.get_current_call_hsitory_collection().insert_one({"sm_name":sales_manger,"lead_id_list":lead_id_list,"No_calls_scheduled":counter,"time":initial_date})
             print("No call scheduled for",sales_manger,counter)
-            
+            print("already scheduled count",already_scheduled_count)
         except Exception as e:
             print("error here->",e)
-        print(' ')              
+            print(' ')              
 
+           
+        
 
 def get_call_history(access_token,sm_name):#this method will get the total scheduled call count and update it to the db
-    url = f"https://www.zohoapis.com/crm/v2/Calls/search?criteria=Owner:equals:{sm_name}&per_page=100&page=1"
+    url = f"https://crm.zoho.com/crm/v2/Calls/search?criteria=(Owner:equals:{sm_name})and((Call_Status:equals:Overdue)or(Call_Status:equals:Scheduled))&per_page=200&page=1"
     headers = {
         "Authorization":f"Zoho-oauthtoken {access_token}"
     }
@@ -68,36 +74,38 @@ def get_call_history(access_token,sm_name):#this method will get the total sched
     try:
         response = requests.get(url=url,headers=headers)
         if response.status_code == 204:
-            return 0
+            return {}# returning empty dictionary because no call found
         else:
             og_response = response.json().get('data')
-            print(og_response)
             scheduled_call_count = 0
             overdue_call_count = 0
-            overdue_call_list = list()
+            overdue_scheduled_call_dict = dict()
+            overdue_call_list=list()
             completed_calls_count =0
             for call in og_response:
                 if call.get('Call_Status') == "Scheduled":
                     scheduled_call_count+=1
+                    scheduled_call_id = call.get('What_Id').get('id')
+                    overdue_scheduled_call_dict[scheduled_call_id] = sm_name
                 elif call.get('Call_Status') == "Overdue":
-                    print("Im executing")
                     overdue_call_count+=1
-                    overdue_call_list.append(call.get('What_Id')) 
-                    print("This is the whatid",call.get('What_Id'))
+                    overdue_call_id = call.get('What_Id').get('id')
+                    overdue_scheduled_call_dict[overdue_call_id] = sm_name
+                    overdue_call_list.append(overdue_call_id)
                 elif call.get('Call_Status') == "Completed":
                     completed_calls_count+=1
             utc = datetime.datetime.fromisoformat(str(datetime.datetime.now()))
-            zone = utc.astimezone(ZoneInfo('Asia/Kolkata'))        
-            call_history_dict.update({"sm_name":sm_name,"scheduled_call_count":scheduled_call_count,"overdue":{"overdue_call_count":overdue_call_count,"lead":overdue_call_list},"completed_calls_count":completed_calls_count,"date":zone.isoformat()})
+            zone = utc.astimezone(ZoneInfo('Asia/Kolkata')).replace(microsecond=0)
+            call_history_dict.update({"sm_name":sm_name,"scheduled_call_count":scheduled_call_count,"overdue_call":{"overdue_call_count":overdue_call_count,"overdue_call_id":overdue_call_list},"completed_calls_count":completed_calls_count,"time":zone})        
             db.get_call_history_collection().insert_one(call_history_dict)
-            print("Last 1 hour Call hsitory stored for processing Execution at",zone.isoformat())        
-            return scheduled_call_count
+            print("Last 1 hour Call history stored for processing Execution at",zone)  
+            return overdue_scheduled_call_dict     
     except Exception as e:
         print(e)
 
 def schedule_call(lead_id,lead_name,owner_id,token,date):
     
-    url = "https://www.zohoapis.com/crm/v2/Calls"
+    url = "https://crm.zoho.com/crm/v2/Calls"
     time_delta = date+timedelta(minutes=25)# add the previous call date with 25 minutes
     utc = datetime.datetime.fromisoformat(str(time_delta))
     call_date = utc.astimezone(ZoneInfo('Asia/Kolkata'))
@@ -107,12 +115,12 @@ def schedule_call(lead_id,lead_name,owner_id,token,date):
             {
             "Event_Title": "Call to be made",
             "Subject": f"call scheduled with client {lead_name}",
-            "What_Id": lead_id,
             "Call_Type": "Outbound",
             "Call_Start_Time": str(dt.isoformat()),
             "Call_Purpose": "Prospecting",
             "Send_Notification": True,
             "$se_module": "Leads",
+            "What_Id": lead_id,
             "Owner": {
                 "id":owner_id,
             }
