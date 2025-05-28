@@ -24,7 +24,7 @@ def get_untoced_leads(access_token):
         print(sales_manger) 
         ignore_lead_dict = get_call_history(token,sales_manger)#call and get the history of calls before scehduling the calls
         print("Ignored_lead_list",type(ignore_lead_dict),ignore_lead_dict)
-        url = f"https://crm.zoho.com/crm/v7/Leads/search?criteria=(Owner:equals:{sales_manger})and(Lead_Status:in:Yet to be dialed)&per_page=200&page=1"
+        url = f"https://crm.zoho.com/crm/v2/Leads/search?criteria=(Owner:equals:{sales_manger})and(Lead_Status:in:Yet to be dialed)&per_page=200&page=1"
         headers = {
             "Authorization":f"Zoho-oauthtoken {access_token}",
             }
@@ -66,7 +66,7 @@ def get_untoced_leads(access_token):
         
 
 def get_call_history(access_token,sm_name):#this method will get the total scheduled call count and update it to the db
-    url = f"https://crm.zoho.com/crm/v2/Calls/search?criteria=(Owner:equals:{sm_name})and((Call_Status:equals:Overdue)or(Call_Status:equals:Scheduled))&per_page=200&page=1"
+    url = f"https://www.zohoapis.com/crm/v2/Calls/search?criteria=(Owner:equals:{sm_name})and((Call_Status:equals:Overdue)or(Call_Status:equals:Scheduled))&per_page=200&page=1"
     headers = {
         "Authorization":f"Zoho-oauthtoken {access_token}"
     }
@@ -105,7 +105,7 @@ def get_call_history(access_token,sm_name):#this method will get the total sched
 
 def schedule_call(lead_id,lead_name,owner_id,token,date):
     
-    url = "https://crm.zoho.com/crm/v2/Calls"
+    url = "https://www.zohoapis.com/crm/v2/Calls"
     time_delta = date+timedelta(minutes=25)# add the previous call date with 25 minutes
     utc = datetime.datetime.fromisoformat(str(time_delta))
     call_date = utc.astimezone(ZoneInfo('Asia/Kolkata'))
