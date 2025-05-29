@@ -23,8 +23,8 @@ def get_untoced_leads(access_token):
     for sales_manger in sales_Manager_names:
         print(sales_manger) 
         ignore_lead_dict = get_call_history(token,sales_manger)#call and get the history of calls before scehduling the calls
-        print("Ignored_lead_list",type(ignore_lead_dict),ignore_lead_dict)
-        url = f"https://crm.zoho.com/crm/v2/Leads/search?criteria=(Owner:equals:{sales_manger})and(Lead_Status:in:Yet to be dialed)&per_page=200&page=1"
+        print("Ignored_lead_list",ignore_lead_dict)
+        url = f"https://crm.zoho.com/crm/v2/Leads/search?criteria=((Owner:equals:{sales_manger})and(Lead_Status:in:Yet to be dialed))&per_page=200&page=1"
         headers = {
             "Authorization":f"Zoho-oauthtoken {access_token}",
             }
@@ -94,11 +94,14 @@ def get_call_history(access_token,sm_name):#this method will get the total sched
                     overdue_call_list.append(overdue_call_id)
                 elif call.get('Call_Status') == "Completed":
                     completed_calls_count+=1
-            utc = datetime.datetime.fromisoformat(str(datetime.datetime.now()))
-            zone = utc.astimezone(ZoneInfo('Asia/Kolkata')).replace(microsecond=0)
-            call_history_dict.update({"sm_name":sm_name,"scheduled_call_count":scheduled_call_count,"overdue_call":{"overdue_call_count":overdue_call_count,"overdue_call_id":overdue_call_list},"completed_calls_count":completed_calls_count,"time":zone})        
+            ist_time = datetime.datetime.now(ZoneInfo("Asia/Kolkata")).replace(microsecond=0)
+
+            # Convert to UTC (if you want to store in MongoDB)
+            utc_time = ist_time.astimezone(ZoneInfo("UTC"))
+
+            call_history_dict.update({"sm_name":sm_name,"scheduled_call_count":scheduled_call_count,"overdue_call":{"overdue_call_count":overdue_call_count,"overdue_call_id":overdue_call_list},"completed_calls_count":completed_calls_count,"time":utc_time})        
             db.get_call_history_collection().insert_one(call_history_dict)
-            print("Last 1 hour Call history stored for processing Execution at",zone)  
+            print("Last 1 hour Call history stored for processing Execution at",utc_time)  
             return overdue_scheduled_call_dict     
     except Exception as e:
         print(e)

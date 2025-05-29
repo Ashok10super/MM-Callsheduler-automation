@@ -3,7 +3,6 @@ name: Run Python Script Daily at 11 AM
 on:
   schedule:
     - cron: '0 11 * * 1-5'  # Every weekday (Mon-Fri) at 11:00 UTC
-  workflow_dispatch:         # Allows manual trigger from GitHub UI
 
 jobs:
   run-script:
