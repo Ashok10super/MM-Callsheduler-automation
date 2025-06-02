@@ -46,7 +46,7 @@ def get_untoced_leads(access_token):
                 else:
                     if counter == 0:
                         lead_id_list.append(lead['id'])
-                        prev_time = schedule_call(lead_id=lead['id'],lead_name=lead['Company'],owner_id=(lead['Owner'])['id'],token=token,date=initial_date)
+                        prev_time = schedule_call(id=lead['id'],name=lead['Company'],module='Leads',owner_id=(lead['Owner'])['id'],token=token,date=initial_date)
                         counter+=1
                     elif prev_time.hour > 17:
                         print("scheduled call went over 17 hours")
@@ -60,11 +60,62 @@ def get_untoced_leads(access_token):
             print("already scheduled count",already_scheduled_count)
         except Exception as e:
             print("error here->",e)
-            print(' ')              
+            print(' ')                         
 
-           
-        
+def schedule_call_for_accounts(token):
+    sales_Manager_names = [  #this list holds all the  sales manager names
+    'Amare Gowda',
+    'Ayush Dingane',
+    'Digamber Pandey',
+    'Pallavi Gattu',
+    'Honnappa Dinni',
+    'Kavya K B', 
+    'Sandip Kumar Jena',
+    'Sonu Sathyan']
 
+    for salesmanger in sales_Manager_names:
+        ignore_account_id = get_call_history(access_token=token,sm_name=salesmanger)
+        print(ignore_account_id)
+        now = datetime.datetime.now().astimezone(ZoneInfo('Asia/Kolkata')).replace(microsecond=0).isoformat()
+        url = f"https://crm.zoho.com/crm/v2/Accounts/search?criteria=((Owner:equals:{salesmanger})and(Status:in:Awareness,Attention,Assessment))&per_page=200&page=1"
+        headers = {
+        "Authorization":f"Zoho-oauthtoken {token}"
+    }
+        try:
+           response = requests.get(url=url,headers=headers)
+           if response.status_code == 204:
+               print("No Account found for this manager",salesmanger)
+               continue
+           json_response = response.json()
+           data = json_response['data']
+           already_scheduled_call = 0
+           initial_date = datetime.datetime.now(tz=ZoneInfo('Asia/Kolkata'))#sets the inital date to now
+           counter = 0
+           for account in data:
+             call_back_time = account.get('Call_Back_Date_Time')
+             if call_back_time!=None:
+                time = datetime.datetime.now().date()
+                call_back_time =datetime.datetime.fromisoformat(str(account.get('Call_Back_Date_Time'))).date()
+                if call_back_time < time:
+                    id = account.get('id')
+                    if id in ignore_account_id:
+                        already_scheduled_call+=1
+                        continue
+                    else:
+                        if counter == 0:
+                            prev_time = schedule_call(id=id,name=account['Account_Name'],module='Accounts',owner_id=(account['Owner'])['id'],token=token,date=initial_date)
+                            counter+=1
+                        elif prev_time.hour > 17:
+                            print("scheduled call went over 17 hours")
+                            break
+                        else:
+                         prev_time = schedule_call(id=id,name=account['Account_Name'],module='Accounts',owner_id=(account['Owner'])['id'],token=token,date=prev_time)
+                         counter+=1
+           print("No of accounts fetched",len(data))   
+           print("Already scheduled call count",already_scheduled_call)
+           print("Scheduled call count",counter)         
+        except Exception as e:
+            print(e)
 def get_call_history(access_token,sm_name):#this method will get the total scheduled call count and update it to the db
     url = f"https://www.zohoapis.com/crm/v2/Calls/search?criteria=(Owner:equals:{sm_name})and((Call_Status:equals:Overdue)or(Call_Status:equals:Scheduled))&per_page=200&page=1"
     headers = {
@@ -106,9 +157,11 @@ def get_call_history(access_token,sm_name):#this method will get the total sched
     except Exception as e:
         print(e)
 
-def schedule_call(lead_id,lead_name,owner_id,token,date):
+
+
+def schedule_call(id,name,owner_id,module,token,date):
     
-    url = "https://www.zohoapis.com/crm/v2/Calls"
+    url = "https://www.zohoapis.com.zoho.com/crm/v2/Calls"
     time_delta = date+timedelta(minutes=25)# add the previous call date with 25 minutes
     utc = datetime.datetime.fromisoformat(str(time_delta))
     call_date = utc.astimezone(ZoneInfo('Asia/Kolkata'))
@@ -117,13 +170,13 @@ def schedule_call(lead_id,lead_name,owner_id,token,date):
         "data": [
             {
             "Event_Title": "Call to be made",
-            "Subject": f"call scheduled with client {lead_name}",
+            "Subject": f"call scheduled with client {name}",
             "Call_Type": "Outbound",
             "Call_Start_Time": str(dt.isoformat()),
             "Call_Purpose": "Prospecting",
             "Send_Notification": True,
-            "$se_module": "Leads",
-            "What_Id": lead_id,
+            "$se_module": module,
+            "What_Id": id,
             "Owner": {
                 "id":owner_id,
             }
