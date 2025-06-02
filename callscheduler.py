@@ -161,7 +161,7 @@ def get_call_history(access_token,sm_name):#this method will get the total sched
 
 def schedule_call(id,name,owner_id,module,token,date):
     
-    url = "https://www.zohoapis.com.zoho.com/crm/v2/Calls"
+    url = "https://www.zohoapis.com/crm/v2/Calls"
     time_delta = date+timedelta(minutes=25)# add the previous call date with 25 minutes
     utc = datetime.datetime.fromisoformat(str(time_delta))
     call_date = utc.astimezone(ZoneInfo('Asia/Kolkata'))
