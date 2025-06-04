@@ -53,7 +53,7 @@ def get_untoced_leads(access_token):
                         break
                     else:
                         lead_id_list.append(lead['id'])
-                        prev_time = schedule_call(lead_id=lead['id'],lead_name=lead['Company'],owner_id=(lead['Owner'])['id'],token=token,date=prev_time)
+                        prev_time = schedule_call(id=lead['id'],lead_name=lead['Company'],owner_id=(lead['Owner'])['id'],token=token,date=prev_time)
                         counter+=1
             db.get_current_call_hsitory_collection().insert_one({"sm_name":sales_manger,"lead_id_list":lead_id_list,"No_calls_scheduled":counter,"time":initial_date})
             print("No call scheduled for",sales_manger,counter)
