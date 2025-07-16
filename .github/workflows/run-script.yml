@@ -3,7 +3,7 @@ name: Run Python Script Daily at 11 AM
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 11 * * 1-6'
+    - cron: '30 5 * * 1-5'
 
 jobs:
   run-script:
