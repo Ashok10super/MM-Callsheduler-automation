@@ -20,9 +20,10 @@ def get_untoced_leads(access_token):
     'Sonu Sathyan']
     token = access_token
     for sales_manger in sales_Manager_names:
+        if sales_manger == 'Pallavi Gattu':
+            continue
         print(sales_manger) 
         ignore_lead_dict = get_call_history(token,sales_manger)#call and get the history of calls before scehduling the calls
-        print("Ignored_lead_list",ignore_lead_dict)
         print("Ignored_lead_length",len(ignore_lead_dict))
         url = f"https://crm.zoho.com/crm/v2/Leads/search?criteria=((Owner:equals:{sales_manger})and(Lead_Status:in:Yet to be dialed))&per_page=200&page=1"
         headers = {
@@ -48,16 +49,17 @@ def get_untoced_leads(access_token):
                         lead_id_list.append(lead['id'])
                         prev_time = schedule_call(id=lead['id'],name=lead['Company'],module='Leads',owner_id=(lead['Owner'])['id'],token=token,date=initial_date)
                         counter+=1
-                    elif prev_time.hour > 13:
-                        print("scheduled call went over 1pm ")
-                        break
                     else:
+                        if prev_time.hour >= 13:
+                            print("scheduled call went over 1pm ")
+                            break
                         lead_id_list.append(lead['id'])
                         prev_time = schedule_call(id=lead['id'],name=lead['Company'],module='Leads',owner_id=(lead['Owner'])['id'],token=token,date=prev_time)
                         counter+=1
             db.get_current_call_hsitory_collection().insert_one({"sm_name":sales_manger,"lead_id_list":lead_id_list,"No_calls_scheduled":counter,"time":initial_date})
             print("No call scheduled for",sales_manger,counter)
             print("Already scheduled count",already_scheduled_count)
+            print("Last call scheduled time",prev_time)
         except Exception as e:
             print("error here->",e)
             print(' ')                         
@@ -74,6 +76,8 @@ def schedule_call_for_accounts(token):
     'Sonu Sathyan']
 
     for salesmanger in sales_Manager_names:
+        if salesmanger == 'Pallavi Gattu':
+            continue
         ignore_account_id = get_call_history(access_token=token,sm_name=salesmanger)
         print("salesmanger",salesmanger)
         print("No of ignored calls-> ",len(ignore_account_id))
@@ -92,6 +96,7 @@ def schedule_call_for_accounts(token):
            already_scheduled_call = 0
            initial_date = now#sets the initial date to now
            counter = 0
+           l=0
            for account in data:
              call_back_time = account.get('Call_Back_Date_Time')
              if call_back_time!=None:
@@ -106,7 +111,7 @@ def schedule_call_for_accounts(token):
                         if counter == 0:
                             prev_time = schedule_call(id=id,name=account['Account_Name'],module='Accounts',owner_id=(account['Owner'])['id'],token=token,date=datetime.datetime.fromisoformat(initial_date))
                             counter+=1
-                        elif prev_time.hour > 16:
+                        elif prev_time.hour >= 16:
                             print("scheduled call went over 6pm")
                             break
                         else:
