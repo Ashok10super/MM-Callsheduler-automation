@@ -20,8 +20,6 @@ def get_untoced_leads(access_token):
     'Sonu Sathyan']
     token = access_token
     for sales_manger in sales_Manager_names:
-        if sales_manger == 'Pallavi Gattu':
-            continue
         print(sales_manger) 
         ignore_lead_dict = get_call_history(token,sales_manger)#call and get the history of calls before scehduling the calls
         print("Ignored_lead_length",len(ignore_lead_dict))
@@ -76,8 +74,6 @@ def schedule_call_for_accounts(token):
     'Sonu Sathyan']
 
     for salesmanger in sales_Manager_names:
-        if salesmanger == 'Pallavi Gattu':
-            continue
         ignore_account_id = get_call_history(access_token=token,sm_name=salesmanger)
         print("salesmanger",salesmanger)
         print("No of ignored calls-> ",len(ignore_account_id))
@@ -150,7 +146,7 @@ def get_call_history(access_token,sm_name):#this method will get the total sched
 def schedule_call(id,name,owner_id,module,token,date):
     
     url = "https://www.zohoapis.com/crm/v2/Calls"
-    time_delta = date+timedelta(minutes=10)# add the previous call date with 25 minutes
+    time_delta = date+timedelta(minutes=15)# add the previous call date with 25 minutes
     utc = datetime.datetime.fromisoformat(str(time_delta))
     call_date = utc.astimezone(ZoneInfo('Asia/Kolkata'))
     dt = call_date.replace(microsecond=0)
